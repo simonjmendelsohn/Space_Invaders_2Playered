@@ -351,6 +351,7 @@ class SpaceInvaders(object):
         self.enemy3Text = Text(FONT, 25, '   =  30 pts', PURPLE, 368, 370)
         self.enemy4Text = Text(FONT, 25, '   =  ?????', RED, 368, 420)
         self.scoreText = Text(FONT, 20, 'Score', WHITE, 5, 5)
+        self.scoreTextO = Text(FONT, 20, 'Score', WHITE, 405, 5)
 
         self.livesTextPlayer = Text(FONT, 20, 'Lives ', WHITE, 240, 5)
         self.lifePlayer1 = Life(315, 3)
@@ -363,7 +364,7 @@ class SpaceInvaders(object):
         self.lifeOther3 = Life(769, 3)
         self.livesGroup = sprite.Group(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
 
-    def reset(self, score):
+    def reset(self, player_score, other_score):
         self.player = Ship(True)
         self.other = Ship(False)
         self.playerGroup = sprite.Group(self.player, self.other)
@@ -380,11 +381,11 @@ class SpaceInvaders(object):
         self.timer = time.get_ticks()
         self.noteTimer = time.get_ticks()
         self.shipTimer = time.get_ticks()
-        self.score = score
+        self.player_score = player_score
+        self.other_score = other_score
         self.create_audio()
         self.makeNewPlayer = False
         self.makeNewOther = False
-        self.shipAlive = True
 
     def make_blockers(self, number):
         blockerGroup = sprite.Group()
@@ -434,9 +435,9 @@ class SpaceInvaders(object):
             if self.should_exit(e):
                 sys.exit()
             if e.type == KEYDOWN:
-                if e.key == K_RETURN:
-                    if len(self.bullets) == 0 and self.shipAlive:
-                        if self.score < 1000:
+                if e.key == K_RETURN and self.lifePlayer1.alive():
+                    if len(self.bullets) == 0:
+                        if self.player_score < 1000:
                             bullet = Bullet(self.player.rect.x + 23,
                                             self.player.rect.y + 5, -1,
                                             15, 'laser', 'center')
@@ -455,9 +456,9 @@ class SpaceInvaders(object):
                             self.allSprites.add(self.bullets)
                             self.sounds['shoot2'].play()
 
-                if e.key == K_SPACE:
-                    if len(self.bullets) == 0 and self.shipAlive:
-                        if self.score < 1000:
+                if e.key == K_SPACE and self.lifeOther1.alive():
+                    if len(self.bullets) == 0:
+                        if self.other_score < 1000:
                             bullet = Bullet(self.other.rect.x + 23,
                                             self.other.rect.y + 5, -1,
                                             15, 'laser', 'center')
@@ -502,7 +503,7 @@ class SpaceInvaders(object):
             self.allSprites.add(self.enemyBullets)
             self.timer = time.get_ticks()
 
-    def calculate_score(self, row):
+    def calculate_score(self, row, column):
         scores = {0: 30,
                   1: 20,
                   2: 20,
@@ -512,7 +513,12 @@ class SpaceInvaders(object):
                   }
 
         score = scores[row]
-        self.score += score
+        if row == 5:
+            column = column // 80
+        if column < 5:
+            self.player_score += score
+        else:
+            self.other_score += score
         return score
 
     def create_main_menu(self):
@@ -535,7 +541,7 @@ class SpaceInvaders(object):
         for enemy in sprite.groupcollide(self.enemies, self.bullets,
                                          True, True).keys():
             self.sounds['invaderkilled'].play()
-            self.calculate_score(enemy.row)
+            self.calculate_score(enemy.row, enemy.column)
             EnemyExplosion(enemy, self.explosionsGroup)
             self.gameTimer = time.get_ticks()
 
@@ -543,7 +549,7 @@ class SpaceInvaders(object):
                                            True, True).keys():
             mystery.mysteryEntered.stop()
             self.sounds['mysterykilled'].play()
-            score = self.calculate_score(mystery.row)
+            score = self.calculate_score(mystery.row, mystery.rect.x)
             MysteryExplosion(mystery, score, self.explosionsGroup)
             newShip = Mystery()
             self.allSprites.add(newShip)
@@ -558,9 +564,9 @@ class SpaceInvaders(object):
                     self.lifePlayer2.kill()
                 elif self.lifePlayer1.alive():
                     self.lifePlayer1.kill()
-                else:
-                    self.gameOver = True
-                    self.startGame = False
+                    if not self.lifeOther1.alive():
+                        self.gameOver = True
+                        self.startGame = False
             else:
                 if self.lifeOther3.alive():
                     self.lifeOther3.kill()
@@ -568,18 +574,17 @@ class SpaceInvaders(object):
                     self.lifeOther2.kill()
                 elif self.lifeOther1.alive():
                     self.lifeOther1.kill()
-                else:
-                    self.gameOver = True
-                    self.startGame = False
+                    if not self.lifePlayer1.alive():
+                        self.gameOver = True
+                        self.startGame = False
 
             self.sounds['shipexplosion'].play()
             ShipExplosion(player, self.explosionsGroup)
-            if player.human:
+            if player.human and self.lifePlayer1.alive():
                 self.makeNewPlayer = True
-            else:
+            elif not player.human and self.lifeOther1.alive():
                 self.makeNewOther = True
             self.shipTimer = time.get_ticks()
-            self.shipAlive = False
 
         if self.enemies.bottom >= 540:
             sprite.groupcollide(self.enemies, self.playerGroup, True, True)
@@ -599,13 +604,11 @@ class SpaceInvaders(object):
                 self.allSprites.add(self.player)
                 self.playerGroup.add(self.player)
                 self.makeNewPlayer = False
-                self.shipAlive = True
             else:
                 self.other = Ship(human)
                 self.allSprites.add(self.other)
                 self.playerGroup.add(self.other)
                 self.makeNewOther = False
-                self.shipAlive = True
 
     def create_game_over(self, currentTime):
         self.screen.blit(self.background, (0, 0))
@@ -646,7 +649,7 @@ class SpaceInvaders(object):
                                                         self.make_blockers(2),
                                                         self.make_blockers(3))
                         self.livesGroup.add(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
-                        self.reset(0)
+                        self.reset(0, 0)
                         self.startGame = True
                         self.mainScreen = False
 
@@ -655,10 +658,14 @@ class SpaceInvaders(object):
                     currentTime = time.get_ticks()
                     if currentTime - self.gameTimer < 3000:
                         self.screen.blit(self.background, (0, 0))
-                        self.scoreText2 = Text(FONT, 20, str(self.score),
+                        self.scoreText2 = Text(FONT, 20, str(self.player_score),
                                                GREEN, 85, 5)
                         self.scoreText.draw(self.screen)
                         self.scoreText2.draw(self.screen)
+                        self.scoreTextO2 = Text(FONT, 20, str(self.other_score),
+                                               GREEN, 485, 5)
+                        self.scoreTextO.draw(self.screen)
+                        self.scoreTextO2.draw(self.screen)
                         self.nextRoundText.draw(self.screen)
                         self.livesTextPlayer.draw(self.screen)
                         self.livesTextOther.draw(self.screen)
@@ -667,17 +674,21 @@ class SpaceInvaders(object):
                     if currentTime - self.gameTimer > 3000:
                         # Move enemies closer to bottom
                         self.enemyPosition += ENEMY_MOVE_DOWN
-                        self.reset(self.score)
+                        self.reset(self.player_score, self.other_score)
                         self.gameTimer += 3000
                 else:
                     currentTime = time.get_ticks()
                     self.play_main_music(currentTime)
                     self.screen.blit(self.background, (0, 0))
                     self.allBlockers.update(self.screen)
-                    self.scoreText2 = Text(FONT, 20, str(self.score), GREEN,
+                    self.scoreText2 = Text(FONT, 20, str(self.player_score), GREEN,
                                            85, 5)
                     self.scoreText.draw(self.screen)
                     self.scoreText2.draw(self.screen)
+                    self.scoreTextO2 = Text(FONT, 20, str(self.other_score), GREEN,
+                                           485, 5)
+                    self.scoreTextO.draw(self.screen)
+                    self.scoreTextO2.draw(self.screen)
                     self.livesTextPlayer.draw(self.screen)
                     self.livesTextOther.draw(self.screen)
                     draw.line(self.screen, WHITE, (400, 0), (400, 600), 1)  # middle line
