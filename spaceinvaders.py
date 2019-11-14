@@ -126,8 +126,8 @@ class EnemiesGroup(sprite.Group):
         self.timer = time.get_ticks()
         self.bottom = game.enemyPosition + ((rows - 1) * 45) + 35
         self._aliveColumns = list(range(columns))
-        self._leftAliveColumn = 0
-        self._rightAliveColumn = columns - 1
+        self.leftAliveColumn = 0
+        self.rightAliveColumn = columns - 1
 
     def update(self, current_time):
         if current_time - self.timer > self.moveTime:
@@ -181,17 +181,17 @@ class EnemiesGroup(sprite.Group):
         if is_column_dead:
             self._aliveColumns.remove(enemy.column)
 
-        if enemy.column == self._rightAliveColumn:
-            while self._rightAliveColumn > 0 and is_column_dead:
-                self._rightAliveColumn -= 1
+        if enemy.column == self.rightAliveColumn:
+            while self.rightAliveColumn > 0 and is_column_dead:
+                self.rightAliveColumn -= 1
                 # self.rightAddMove += 5
-                is_column_dead = self.is_column_dead(self._rightAliveColumn)
+                is_column_dead = self.is_column_dead(self.rightAliveColumn)
 
-        elif enemy.column == self._leftAliveColumn:
-            while self._leftAliveColumn < self.columns and is_column_dead:
-                self._leftAliveColumn += 1
+        elif enemy.column == self.leftAliveColumn:
+            while self.leftAliveColumn < self.columns and is_column_dead:
+                self.leftAliveColumn += 1
                 # self.leftAddMove += 5
-                is_column_dead = self.is_column_dead(self._leftAliveColumn)
+                is_column_dead = self.is_column_dead(self.leftAliveColumn)
 
 
 class Blocker(sprite.Sprite):
@@ -587,8 +587,29 @@ class SpaceInvaders(object):
             self.shipTimer = time.get_ticks()
 
         if self.enemies.bottom >= 540:
-            sprite.groupcollide(self.enemies, self.playerGroup, True, True)
-            if not self.player.alive() or self.enemies.bottom >= 600:
+            for player in sprite.groupcollide(self.playerGroup, self.enemies, True, True).keys():
+                if player.human:
+                    self.lifePlayer3.kill()
+                    self.lifePlayer2.kill()
+                    self.lifePlayer1.kill()
+                else:
+                    self.lifeOther3.kill()
+                    self.lifeOther2.kill()
+                    self.lifeOther1.kill()
+
+            if self.enemies.bottom >= 600:
+                if self.enemies.leftAliveColumn < 5:
+                    self.player.kill()
+                    self.lifePlayer3.kill()
+                    self.lifePlayer2.kill()
+                    self.lifePlayer1.kill()
+                if self.enemies.rightAliveColumn >= 5:
+                    self.other.kill()
+                    self.lifeOther3.kill()
+                    self.lifeOther2.kill()
+                    self.lifeOther1.kill()
+
+            if (not self.player.alive() and not self.other.alive()):
                 self.gameOver = True
                 self.startGame = False
 
