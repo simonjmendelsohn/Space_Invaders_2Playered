@@ -6,7 +6,7 @@
 from pygame import *
 import sys
 from os.path import abspath, dirname
-from random import choice
+import random
 
 # Paths
 BASE_PATH = abspath(dirname(__file__))
@@ -25,7 +25,7 @@ RED = (237, 28, 36)
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 SCREEN = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 FONT = FONT_PATH + 'space_invaders.ttf'
-IMG_NAMES = ['ship', 'mystery',
+IMG_NAMES = ['ship', 'other', 'mystery',
              'enemy1_1', 'enemy1_2',
              'enemy2_1', 'enemy2_2',
              'enemy3_1', 'enemy3_2',
@@ -41,8 +41,12 @@ ENEMY_MOVE_DOWN = 35
 class Ship(sprite.Sprite):
     def __init__(self, human=True):
         sprite.Sprite.__init__(self)
-        self.image = IMAGES['ship']
         self.human = human
+        self.image = IMAGES['ship']
+        self.direction = "none"
+        if not human:
+            self.image = IMAGES['other']
+            self.direction = "right"
         if self.human:
             self.rect = self.image.get_rect(topleft=(200, 540))
         else:
@@ -164,7 +168,7 @@ class EnemiesGroup(sprite.Group):
                        for row in range(self.rows))
 
     def random_bottom(self):
-        col = choice(self._aliveColumns)
+        col = random.choice(self._aliveColumns)
         col_enemies = (self.enemies[row - 1][col]
                        for row in range(self.rows, 0, -1))
         return next((en for en in col_enemies if en is not None), None)
@@ -325,6 +329,35 @@ class Text(object):
     def draw(self, surface):
         surface.blit(self.surface, self.rect)
 
+def updateAI(ai, enemies, enemyBullets, blockers):
+    hit, leftHit, rightHit = False, False, False
+    for bullet in enemyBullets:
+        #print(ai.rect.x, bullet.rect.x)
+        diff = bullet.rect.x - ai.rect.x
+        if diff >= 40 and diff <= 80 or ai.rect.x > 740:
+            rightHit = True
+        elif diff >= -1 and diff <= 50:
+            hit = True
+        elif diff >= -20 and diff <= -1 or ai.rect.x < 410:
+            leftHit = True
+
+    if hit and rightHit and ai.rect.x > 10:
+        ai.rect.x -= ai.speed
+    elif hit and ai.rect.x < 740:
+        ai.rect.x += ai.speed
+    elif rightHit:
+        ai.rect.x -= 1
+    elif leftHit:
+        ai.rect.x += 1
+    else:
+        if ai.direction == "left" and ai.rect.x > 410:
+            ai.rect.x -= 1
+        elif ai.direction == "right" and ai.rect.x < 740:
+            ai.rect.x += 1
+        if ai.rect.x <= 410:
+            ai.direction = "right"
+        elif ai.rect.x >= 740:
+            ai.direction = "left"
 
 class SpaceInvaders(object):
     def __init__(self):
@@ -435,47 +468,23 @@ class SpaceInvaders(object):
             if self.should_exit(e):
                 sys.exit()
             if e.type == KEYDOWN:
-                if e.key == K_RETURN and self.lifePlayer1.alive():
-                    if len(self.bullets) == 0:
-                        if self.player_score < 1000:
-                            bullet = Bullet(self.player.rect.x + 23,
-                                            self.player.rect.y + 5, -1,
-                                            15, 'laser', 'center')
-                            self.bullets.add(bullet)
-                            self.allSprites.add(self.bullets)
-                            self.sounds['shoot'].play()
-                        else:
-                            leftbullet = Bullet(self.player.rect.x + 8,
-                                                self.player.rect.y + 5, -1,
-                                                15, 'laser', 'left')
-                            rightbullet = Bullet(self.player.rect.x + 38,
-                                                 self.player.rect.y + 5, -1,
-                                                 15, 'laser', 'right')
-                            self.bullets.add(leftbullet)
-                            self.bullets.add(rightbullet)
-                            self.allSprites.add(self.bullets)
-                            self.sounds['shoot2'].play()
+                if e.key == K_SPACE and self.lifePlayer1.alive():
+                    if len(self.bullets) < 2:
+                        bullet = Bullet(self.player.rect.x + 23,
+                                        self.player.rect.y + 5, -1,
+                                        15, 'laser', 'center')
+                        self.bullets.add(bullet)
+                        self.allSprites.add(self.bullets)
+                        self.sounds['shoot'].play()
 
-                if e.key == K_SPACE and self.lifeOther1.alive():
-                    if len(self.bullets) == 0:
-                        if self.other_score < 1000:
-                            bullet = Bullet(self.other.rect.x + 23,
-                                            self.other.rect.y + 5, -1,
-                                            15, 'laser', 'center')
-                            self.bullets.add(bullet)
-                            self.allSprites.add(self.bullets)
-                            self.sounds['shoot'].play()
-                        else:
-                            leftbullet = Bullet(self.other.rect.x + 8,
-                                                self.other.rect.y + 5, -1,
-                                                15, 'laser', 'left')
-                            rightbullet = Bullet(self.other.rect.x + 38,
-                                                 self.other.rect.y + 5, -1,
-                                                 15, 'laser', 'right')
-                            self.bullets.add(leftbullet)
-                            self.bullets.add(rightbullet)
-                            self.allSprites.add(self.bullets)
-                            self.sounds['shoot2'].play()
+        if self.lifeOther1.alive():
+            if len(self.bullets) == 0:
+                bullet = Bullet(self.other.rect.x + 23,
+                                self.other.rect.y + 5, -1,
+                                15, 'laser', 'center')
+                self.bullets.add(bullet)
+                self.allSprites.add(self.bullets)
+                self.sounds['shoot'].play()
 
     def make_enemies(self):
         enemies = EnemiesGroup(10, 5)
@@ -509,7 +518,7 @@ class SpaceInvaders(object):
                   2: 20,
                   3: 10,
                   4: 10,
-                  5: choice([50, 100, 150, 300])
+                  5: random.choice([50, 100, 150, 300])
                   }
 
         score = scores[row]
@@ -598,6 +607,7 @@ class SpaceInvaders(object):
                     self.lifeOther1.kill()
 
             if self.enemies.bottom >= 600:
+                #print(self.enemies.bottom)
                 if self.enemies.leftAliveColumn < 5:
                     self.player.kill()
                     self.lifePlayer3.kill()
@@ -716,6 +726,7 @@ class SpaceInvaders(object):
                     self.check_input()
                     self.enemies.update(currentTime)
                     self.allSprites.update(self.keys, currentTime)
+                    updateAI(self.other, self.enemies, self.enemyBullets, self.allBlockers)
                     self.explosionsGroup.update(currentTime)
                     self.check_collisions()
                     self.create_new_ship(self.makeNewPlayer, currentTime, human=True)
