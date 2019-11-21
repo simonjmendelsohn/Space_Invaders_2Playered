@@ -43,10 +43,9 @@ class Ship(sprite.Sprite):
         sprite.Sprite.__init__(self)
         self.human = human
         self.image = IMAGES['ship']
-        self.direction = "none"
+        self.direction = -1
         if not human:
             self.image = IMAGES['other']
-            self.direction = "right"
         if self.human:
             self.rect = self.image.get_rect(topleft=(200, 540))
         else:
@@ -329,35 +328,49 @@ class Text(object):
     def draw(self, surface):
         surface.blit(self.surface, self.rect)
 
-def updateAI(ai, enemies, enemyBullets, blockers):
-    hit, leftHit, rightHit = False, False, False
-    for bullet in enemyBullets:
-        #print(ai.rect.x, bullet.rect.x)
-        diff = bullet.rect.x - ai.rect.x
-        if diff >= 40 and diff <= 80 or ai.rect.x > 740:
-            rightHit = True
-        elif diff >= -1 and diff <= 50:
-            hit = True
-        elif diff >= -20 and diff <= -1 or ai.rect.x < 410:
-            leftHit = True
+def updateAI(ai, enemies, enemyBullets, cooperate):
+    rightEnemy = leftEnemy = 0
+    for enemy in enemies:
+        if enemy.rect.x > rightEnemy:
+            rightEnemy = enemy.rect.x
+        if enemy.rect.x < leftEnemy:
+            leftEnemy = enemy.rect.x
 
-    if hit and rightHit and ai.rect.x > 10:
+    leftWall = 10
+    if not cooperate:
+        leftWall = 410
+
+    # dodge
+    moveLeft = moveRight = True
+    hit = False
+    for bullet in enemyBullets:
+        if bullet.rect.y < 300:
+            continue
+        diff = bullet.rect.x - ai.rect.x
+        if (diff > -30 and diff < -1):
+            moveLeft = False
+        if diff >= -1 and diff <= 50:
+            hit = True
+        if (diff > 50 and diff < 80):
+            moveRight = False
+
+    if ai.rect.x < 10:
+        ai.direction = 1
+    elif ai.rect.x > 740:
+        ai.direction = -1
+
+    if moveLeft and moveRight and hit:
+        ai.rect.x += ai.direction * ai.speed
+    elif ai.rect.x > 10 and moveLeft and hit:
         ai.rect.x -= ai.speed
-    elif hit and ai.rect.x < 740:
+    elif ai.rect.x < 740 and moveRight and hit:
         ai.rect.x += ai.speed
-    elif rightHit:
-        ai.rect.x -= 1
-    elif leftHit:
-        ai.rect.x += 1
-    else:
-        if ai.direction == "left" and ai.rect.x > 410:
-            ai.rect.x -= 1
-        elif ai.direction == "right" and ai.rect.x < 740:
-            ai.rect.x += 1
-        if ai.rect.x <= 410:
-            ai.direction = "right"
-        elif ai.rect.x >= 740:
-            ai.direction = "left"
+    elif ai.rect.x > rightEnemy and moveLeft and ai.rect.x > leftWall:
+        ai.rect.x -= ai.speed
+    elif ai.rect.x < rightEnemy - 10 and moveRight:
+        ai.rect.x += ai.speed
+
+
 
 class SpaceInvaders(object):
     def __init__(self):
@@ -377,7 +390,7 @@ class SpaceInvaders(object):
         self.titleText = Text(FONT, 50, 'Space Invaders', WHITE, 164, 155)
         self.titleText2 = Text(FONT, 25, 'Press any key to continue', WHITE,
                                201, 225)
-        self.gameOverText = Text(FONT, 50, 'Game Over', WHITE, 250, 270)
+        #self.gameOverText = Text(FONT, 50, 'Game Over', WHITE, 250, 270)
         self.nextRoundText = Text(FONT, 50, 'Next Round', WHITE, 240, 270)
         self.enemy1Text = Text(FONT, 25, '   =   10 pts', GREEN, 368, 270)
         self.enemy2Text = Text(FONT, 25, '   =  20 pts', BLUE, 368, 320)
@@ -462,20 +475,6 @@ class SpaceInvaders(object):
         return evt.type == QUIT or (evt.type == KEYUP and evt.key == K_ESCAPE)
 
     def check_input(self):
-        self.keys = key.get_pressed()
-
-        for e in event.get():
-            if self.should_exit(e):
-                sys.exit()
-            if e.type == KEYDOWN:
-                if e.key == K_SPACE and self.lifePlayer1.alive():
-                    if len(self.bullets) < 2:
-                        bullet = Bullet(self.player.rect.x + 23,
-                                        self.player.rect.y + 5, -1,
-                                        15, 'laser', 'center')
-                        self.bullets.add(bullet)
-                        self.allSprites.add(self.bullets)
-                        self.sounds['shoot'].play()
 
         if self.lifeOther1.alive():
             if len(self.bullets) == 0:
@@ -485,6 +484,21 @@ class SpaceInvaders(object):
                 self.bullets.add(bullet)
                 self.allSprites.add(self.bullets)
                 self.sounds['shoot'].play()
+
+        self.keys = key.get_pressed()
+        for e in event.get():
+            if self.should_exit(e):
+                sys.exit()
+            if e.type == KEYDOWN:
+                if e.key == K_SPACE and self.lifePlayer1.alive():
+                    if len(self.bullets) < 2:
+                        bullet = Bullet(self.player.rect.x + 23,
+                                        self.player.rect.y + 5, -1,
+                                        15, 'laser', 'center')
+                        #self.myBullets.add(bullet)
+                        self.bullets.add(bullet)
+                        self.allSprites.add(self.bullets)
+                        self.sounds['shoot'].play()
 
     def make_enemies(self):
         enemies = EnemiesGroup(10, 5)
@@ -623,10 +637,10 @@ class SpaceInvaders(object):
                 self.gameOver = True
                 self.startGame = False
 
-        sprite.groupcollide(self.bullets, self.allBlockers, True, True)
-        sprite.groupcollide(self.enemyBullets, self.allBlockers, True, True)
-        if self.enemies.bottom >= BLOCKERS_POSITION:
-            sprite.groupcollide(self.enemies, self.allBlockers, False, True)
+        # sprite.groupcollide(self.bullets, self.allBlockers, True, True)
+        # sprite.groupcollide(self.enemyBullets, self.allBlockers, True, True)
+        # if self.enemies.bottom >= BLOCKERS_POSITION:
+        #     sprite.groupcollide(self.enemies, self.allBlockers, False, True)
 
     def create_new_ship(self, createShip, currentTime, human):
         if createShip and (currentTime - self.shipTimer > 900):
@@ -641,18 +655,21 @@ class SpaceInvaders(object):
                 self.playerGroup.add(self.other)
                 self.makeNewOther = False
 
-    def create_game_over(self, currentTime):
+    def create_game_over(self, currentTime, win=False):
         self.screen.blit(self.background, (0, 0))
         passed = currentTime - self.timer
-        if passed < 750:
-            self.gameOverText.draw(self.screen)
-        elif 750 < passed < 1500:
+        if passed < 10000:
             self.screen.blit(self.background, (0, 0))
-        elif 1500 < passed < 2250:
-            self.gameOverText.draw(self.screen)
-        elif 2250 < passed < 2750:
-            self.screen.blit(self.background, (0, 0))
-        elif passed > 3000:
+            if win:
+                Text(FONT, 50, 'Enemies Destroyed!', WHITE, 100, 270).draw(self.screen)
+            else:
+                Text(FONT, 50, 'Game Over!', WHITE, 250, 270).draw(self.screen)
+
+            Text(FONT, 30, 'Player Score:', WHITE, 100, 400).draw(self.screen)
+            Text(FONT, 30, str(self.player_score), GREEN, 100, 450).draw(self.screen)
+            Text(FONT, 30, 'AI Score:', WHITE, 500, 400).draw(self.screen)
+            Text(FONT, 30, str(self.other_score), GREEN, 500, 450).draw(self.screen)
+        elif passed > 10000:
             self.mainScreen = True
 
         for e in event.get():
@@ -675,10 +692,10 @@ class SpaceInvaders(object):
                         sys.exit()
                     if e.type == KEYUP:
                         # Only create blockers on a new game, not a new round
-                        self.allBlockers = sprite.Group(self.make_blockers(0),
-                                                        self.make_blockers(1),
-                                                        self.make_blockers(2),
-                                                        self.make_blockers(3))
+                        # self.allBlockers = sprite.Group(self.make_blockers(0),
+                        #                                 self.make_blockers(1),
+                        #                                 self.make_blockers(2),
+                        #                                 self.make_blockers(3))
                         self.livesGroup.add(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
                         self.reset(0, 0)
                         self.startGame = True
@@ -687,31 +704,14 @@ class SpaceInvaders(object):
             elif self.startGame:
                 if not self.enemies and not self.explosionsGroup:
                     currentTime = time.get_ticks()
-                    if currentTime - self.gameTimer < 3000:
-                        self.screen.blit(self.background, (0, 0))
-                        self.scoreText2 = Text(FONT, 20, str(self.player_score),
-                                               GREEN, 85, 5)
-                        self.scoreText.draw(self.screen)
-                        self.scoreText2.draw(self.screen)
-                        self.scoreTextO2 = Text(FONT, 20, str(self.other_score),
-                                               GREEN, 485, 5)
-                        self.scoreTextO.draw(self.screen)
-                        self.scoreTextO2.draw(self.screen)
-                        self.nextRoundText.draw(self.screen)
-                        self.livesTextPlayer.draw(self.screen)
-                        self.livesTextOther.draw(self.screen)
-                        self.livesGroup.update()
-                        self.check_input()
-                    if currentTime - self.gameTimer > 3000:
-                        # Move enemies closer to bottom
-                        self.enemyPosition += ENEMY_MOVE_DOWN
-                        self.reset(self.player_score, self.other_score)
-                        self.gameTimer += 3000
+                    # Reset enemy starting position
+                    self.enemyPosition = ENEMY_DEFAULT_POSITION
+                    self.create_game_over(currentTime, win=True)
                 else:
                     currentTime = time.get_ticks()
                     self.play_main_music(currentTime)
                     self.screen.blit(self.background, (0, 0))
-                    self.allBlockers.update(self.screen)
+                    #self.allBlockers.update(self.screen)
                     self.scoreText2 = Text(FONT, 20, str(self.player_score), GREEN,
                                            85, 5)
                     self.scoreText.draw(self.screen)
@@ -726,7 +726,10 @@ class SpaceInvaders(object):
                     self.check_input()
                     self.enemies.update(currentTime)
                     self.allSprites.update(self.keys, currentTime)
-                    updateAI(self.other, self.enemies, self.enemyBullets, self.allBlockers)
+                    cooperate = False
+                    if len(sys.argv) > 1 and sys.argv[1] == "c":
+                            cooperate = True
+                    updateAI(self.other, self.enemies, self.enemyBullets, cooperate=cooperate)
                     self.explosionsGroup.update(currentTime)
                     self.check_collisions()
                     self.create_new_ship(self.makeNewPlayer, currentTime, human=True)
