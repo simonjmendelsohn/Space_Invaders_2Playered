@@ -7,6 +7,8 @@ from pygame import *
 import sys
 from os.path import abspath, dirname
 import random
+from datetime import datetime
+import time as ti
 
 # Paths
 BASE_PATH = abspath(dirname(__file__))
@@ -22,15 +24,20 @@ BLUE = (80, 255, 239)
 PURPLE = (203, 0, 255)
 RED = (237, 28, 36)
 
+if len(sys.argv) > 1 and sys.argv[1] == "c":
+    cooperate = True
+else:
+    cooperate = False
+
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 SCREEN = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 FONT = FONT_PATH + 'space_invaders.ttf'
-IMG_NAMES = ['ship', 'other', 'mystery',
+IMG_NAMES = ['ship', 'avery', 'jordan', 'mystery',
              'enemy1_1', 'enemy1_2',
              'enemy2_1', 'enemy2_2',
              'enemy3_1', 'enemy3_2',
              'explosionblue', 'explosiongreen', 'explosionpurple',
-             'laser', 'enemylaser']
+             'laser', 'enemylaser'] # avery and jordan are the AIs; blue and pink versions of 'ship'
 IMAGES = {name: image.load(IMAGE_PATH + '{}.png'.format(name)).convert_alpha() for name in IMG_NAMES}
 
 BLOCKERS_POSITION = 450
@@ -45,7 +52,10 @@ class Ship(sprite.Sprite):
         self.image = IMAGES['ship']
         self.direction = -1
         if not human:
-            self.image = IMAGES['other']
+            if not cooperate:
+                self.image = IMAGES['avery'] # blue
+            else:
+                self.image = IMAGES['jordan'] # pink
         if self.human:
             self.rect = self.image.get_rect(topleft=(200, 540))
         else:
@@ -64,12 +74,13 @@ class Ship(sprite.Sprite):
 
 
 class Bullet(sprite.Sprite):
-    def __init__(self, xpos, ypos, direction, speed, filename, side):
+    def __init__(self, xpos, ypos, direction, speed, filename, origin):
         sprite.Sprite.__init__(self)
         self.image = IMAGES[filename]
         self.rect = self.image.get_rect(topleft=(xpos, ypos))
         self.speed = speed
         self.direction = direction
+        self.origin = origin
 
     def update(self, keys, *args):
         game.screen.blit(self.image, self.rect)
@@ -218,10 +229,13 @@ class Mystery(sprite.Sprite):
         sprite.Sprite.__init__(self)
         self.image = IMAGES['mystery']
         self.image = transform.scale(self.image, (75, 35))
-        self.rect = self.image.get_rect(topleft=(-80, 45))
+        self.direction = random.choice([-1, 1])
+        if self.direction == 1:
+            self.rect = self.image.get_rect(topleft=(-80, 45))
+        else:
+            self.rect = self.image.get_rect(topright=(880, 45))
         self.row = 5
         self.moveTime = 25000
-        self.direction = 1
         self.timer = time.get_ticks()
         self.mysteryEntered = mixer.Sound(SOUND_PATH + 'mysteryentered.wav')
         self.mysteryEntered.set_volume(0.3)
@@ -367,9 +381,8 @@ def updateAI(ai, enemies, enemyBullets, cooperate):
         ai.rect.x += ai.speed
     elif ai.rect.x > rightEnemy and moveLeft and ai.rect.x > leftWall:
         ai.rect.x -= ai.speed
-    elif ai.rect.x < rightEnemy - 10 and moveRight:
+    elif (ai.rect.x < rightEnemy - 10 and moveRight) or (ai.rect.x < leftWall and moveRight):
         ai.rect.x += ai.speed
-
 
 
 class SpaceInvaders(object):
@@ -409,6 +422,12 @@ class SpaceInvaders(object):
         self.lifeOther2 = Life(742, 3)
         self.lifeOther3 = Life(769, 3)
         self.livesGroup = sprite.Group(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
+
+        # for logs:
+        self.humanKillL = 0
+        self.humanKillR = 0
+        self.otherKillL = 0
+        self.otherKillR = 0
 
     def reset(self, player_score, other_score):
         self.player = Ship(True)
@@ -475,12 +494,21 @@ class SpaceInvaders(object):
         return evt.type == QUIT or (evt.type == KEYUP and evt.key == K_ESCAPE)
 
     def check_input(self):
+        humanCanShoot = otherCanShoot = True
+        for bullet in self.bullets:
+            if bullet.origin == "human":
+                humanCanShoot = False
+            elif bullet.origin == "other":
+                otherCanShoot = False
+
+        if not cooperate and self.enemies.rightAliveColumn < 5:
+            otherCanShoot = False
 
         if self.lifeOther1.alive():
-            if len(self.bullets) == 0:
+            if otherCanShoot:
                 bullet = Bullet(self.other.rect.x + 23,
                                 self.other.rect.y + 5, -1,
-                                15, 'laser', 'center')
+                                15, 'laser', origin="other")
                 self.bullets.add(bullet)
                 self.allSprites.add(self.bullets)
                 self.sounds['shoot'].play()
@@ -488,13 +516,13 @@ class SpaceInvaders(object):
         self.keys = key.get_pressed()
         for e in event.get():
             if self.should_exit(e):
-                sys.exit()
+                self.makeExit()
             if e.type == KEYDOWN:
                 if e.key == K_SPACE and self.lifePlayer1.alive():
-                    if len(self.bullets) < 2:
+                    if humanCanShoot:
                         bullet = Bullet(self.player.rect.x + 23,
                                         self.player.rect.y + 5, -1,
-                                        15, 'laser', 'center')
+                                        15, 'laser', origin="human")
                         #self.myBullets.add(bullet)
                         self.bullets.add(bullet)
                         self.allSprites.add(self.bullets)
@@ -522,7 +550,7 @@ class SpaceInvaders(object):
             enemy = self.enemies.random_bottom()
             self.enemyBullets.add(
                 Bullet(enemy.rect.x + 14, enemy.rect.y + 20, 1, 5,
-                       'enemylaser', 'center'))
+                       'enemylaser', origin="enemy"))
             self.allSprites.add(self.enemyBullets)
             self.timer = time.get_ticks()
 
@@ -561,12 +589,24 @@ class SpaceInvaders(object):
     def check_collisions(self):
         sprite.groupcollide(self.bullets, self.enemyBullets, True, True)
 
-        for enemy in sprite.groupcollide(self.enemies, self.bullets,
-                                         True, True).keys():
+        enemyBulletDict = sprite.groupcollide(self.enemies, self.bullets,
+                                         True, True)
+        for enemy in enemyBulletDict.keys():
             self.sounds['invaderkilled'].play()
             self.calculate_score(enemy.row, enemy.column)
             EnemyExplosion(enemy, self.explosionsGroup)
             self.gameTimer = time.get_ticks()
+
+            # update for logs:
+            for bullet in enemyBulletDict[enemy]:
+                if enemy.column >= 5 and bullet.origin == "human":
+                    self.humanKillR += 1
+                elif enemy.column < 5 and bullet.origin == "human":
+                    self.humanKillL += 1
+                elif enemy.column >= 5 and bullet.origin == "other":
+                    self.otherKillR += 1
+                elif enemy.column < 5 and bullet.origin == "other":
+                    self.otherKillL += 1
 
         for mystery in sprite.groupcollide(self.mysteryGroup, self.bullets,
                                            True, True).keys():
@@ -632,6 +672,9 @@ class SpaceInvaders(object):
                     self.lifeOther3.kill()
                     self.lifeOther2.kill()
                     self.lifeOther1.kill()
+                # Reset enemy starting position
+                self.enemyPosition = ENEMY_DEFAULT_POSITION
+                self.create_game_over(time.get_ticks(), False)
 
             if (not self.player.alive() and not self.other.alive()):
                 self.gameOver = True
@@ -671,10 +714,11 @@ class SpaceInvaders(object):
             Text(FONT, 30, str(self.other_score), GREEN, 500, 450).draw(self.screen)
         elif passed > 10000:
             self.mainScreen = True
-
         for e in event.get():
+            if e.type == KEYUP and passed > 1000:
+                self.mainScreen = True
             if self.should_exit(e):
-                sys.exit()
+                self.makeExit()
 
     def main(self):
         while True:
@@ -689,7 +733,7 @@ class SpaceInvaders(object):
                 self.create_main_menu()
                 for e in event.get():
                     if self.should_exit(e):
-                        sys.exit()
+                        self.makeExit()
                     if e.type == KEYUP:
                         # Only create blockers on a new game, not a new round
                         # self.allBlockers = sprite.Group(self.make_blockers(0),
@@ -721,14 +765,15 @@ class SpaceInvaders(object):
                     self.scoreTextO.draw(self.screen)
                     self.scoreTextO2.draw(self.screen)
                     self.livesTextPlayer.draw(self.screen)
+                    if not self.lifePlayer1.alive():
+                        draw.line(self.screen, RED, (238, 15), (310, 15), 3)
                     self.livesTextOther.draw(self.screen)
+                    if not self.lifeOther1.alive():
+                        draw.line(self.screen, RED, (638, 15), (710, 15), 3)
                     draw.line(self.screen, WHITE, (400, 0), (400, 600), 1)  # middle line
                     self.check_input()
                     self.enemies.update(currentTime)
                     self.allSprites.update(self.keys, currentTime)
-                    cooperate = False
-                    if len(sys.argv) > 1 and sys.argv[1] == "c":
-                            cooperate = True
                     updateAI(self.other, self.enemies, self.enemyBullets, cooperate=cooperate)
                     self.explosionsGroup.update(currentTime)
                     self.check_collisions()
@@ -745,7 +790,23 @@ class SpaceInvaders(object):
             display.update()
             self.clock.tick(60)
 
+    def makeExit(self):
+        c = "cooperative" if cooperate else "uncooperative"
+        logs.write("Game against: " + c + " player\n")
+        duration = str(int(ti.time() - startTime))
+        logs.write("Duration (seconds): " + duration + "\n")
+        logs.write("(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)\n")
+        logs.write("Human: (" + str(self.player_score) + ", " + str(self.lifePlayer1.alive())
+                   + ", " + str(self.humanKillL) + ", " + str(self.humanKillR) + ")\n")
+        logs.write("AI: (" + str(self.other_score) + ", " + str(self.lifeOther1.alive())
+                   + ", " + str(self.otherKillL) + ", " + str(self.otherKillR) + ")\n\n")
+        sys.exit()
 
 if __name__ == '__main__':
+    logs = open("logs.txt", "a")
+    logs.write("Date/Time: " + datetime.now().strftime("%m/%d/%Y %H:%M:%S") + "\n")
+    # variables for log
+    startTime = ti.time()
+
     game = SpaceInvaders()
     game.main()
