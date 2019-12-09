@@ -1,0 +1,86 @@
+Date/Time: 11/27/2019 09:53:35
+Game: practice round
+Duration (seconds): 1007
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (180, False, 548, 0)
+AI: (0, False, 0, 0)
+
+Date/Time: 11/27/2019 10:12:28
+Game against: cooperative player
+Duration (seconds): 36
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (550, True, 19, 0)
+AI: (450, True, 6, 25)
+
+Date/Time: 11/27/2019 10:23:10
+Game: practice round
+Duration (seconds): 3
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Date/Time: 11/27/2019 15:19:42
+Game against: cooperative player
+Duration (seconds): 667
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (450, False, 33, 0)
+AI: (450, True, 42, 75)
+
+Date/Time: 12/05/2019 14:27:27
+Game against: uncooperative player
+Duration (seconds): 5
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (10, True, 1, 0)
+AI: (100, True, 0, 6)
+
+Date/Time: 12/05/2019 14:27:43
+Game: practice round
+Duration (seconds): 11
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (120, True, 11, 0)
+AI: (0, False, 0, 0)
+
+Date/Time: 12/05/2019 19:24:36
+Game against: cooperative player
+Duration (seconds): 153
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (450, True, 55, 0)
+AI: (450, True, 20, 75)
+
+Date/Time: 12/05/2019 19:27:18
+Game against: uncooperative player
+Duration (seconds): 84
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (420, False, 24, 0)
+AI: (850, True, 0, 25)
+
+Date/Time: 12/09/2019 10:43:16
+Game against: uncooperative player
+Duration (seconds): 9
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (30, True, 2, 0)
+AI: (170, True, 0, 11)
+
+Date/Time: 12/09/2019 10:44:18
+Game against: uncooperative player
+Duration (seconds): 12
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (20, True, 2, 0)
+AI: (270, True, 0, 15)
+
+Date/Time: 12/09/2019 13:37:43
+Game against: uncooperative player
+Duration (seconds): 5
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (0, True, 0, 0)
+AI: (130, True, 0, 8)
+
+Date/Time: 12/09/2019 13:52:23
+Game against: uncooperative player
+Duration (seconds): 1
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+
+Date/Time: 12/09/2019 14:01:55
+Game against: uncooperative player
+Duration (seconds): 34
+(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
+Human: (450, True, 25, 0)
+AI: (450, True, 0, 25)
+

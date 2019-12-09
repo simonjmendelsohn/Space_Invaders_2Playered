@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Space Invaders - 2-Playered
-# Adapted by Simon Mendelsohn (from code by Lee Robinson)
+# By Simon Mendelsohn (adapted from code by Lee Robinson)
 
 from pygame import *
 import sys
@@ -24,10 +24,12 @@ BLUE = (80, 255, 239)
 PURPLE = (203, 0, 255)
 RED = (237, 28, 36)
 
-if len(sys.argv) > 1 and sys.argv[1] == "c":
-    cooperate = True
-else:
-    cooperate = False
+mode = "d"
+if len(sys.argv) > 1:
+    if sys.argv[1] == "c":
+        mode = "c"
+    elif sys.argv[1] == "p":
+        mode = "p"
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 SCREEN = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -52,7 +54,7 @@ class Ship(sprite.Sprite):
         self.image = IMAGES['ship']
         self.direction = -1
         if not human:
-            if not cooperate:
+            if mode != "c":
                 self.image = IMAGES['avery'] # blue
             else:
                 self.image = IMAGES['jordan'] # pink
@@ -342,7 +344,7 @@ class Text(object):
     def draw(self, surface):
         surface.blit(self.surface, self.rect)
 
-def updateAI(ai, enemies, enemyBullets, cooperate):
+def updateAI(ai, enemies, enemyBullets, mode):
     rightEnemy = leftEnemy = 0
     for enemy in enemies:
         if enemy.rect.x > rightEnemy:
@@ -351,7 +353,7 @@ def updateAI(ai, enemies, enemyBullets, cooperate):
             leftEnemy = enemy.rect.x
 
     leftWall = 10
-    if not cooperate:
+    if mode != "c":
         leftWall = 410
 
     # dodge
@@ -418,12 +420,12 @@ class SpaceInvaders(object):
         self.lifePlayer3 = Life(369, 3)
 
         self.livesTextOther = Text(FONT, 20, 'Lives ', WHITE, 640, 5)
-        self.lifeOther1 = Life(715, 3)
-        self.lifeOther2 = Life(742, 3)
-        self.lifeOther3 = Life(769, 3)
-        self.livesGroup = sprite.Group(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
+        self.lifeOther = Life(715, 3)
+        # self.lifeOther2 = Life(742, 3)
+        # self.lifeOther3 = Life(769, 3)
+        self.livesGroup = sprite.Group(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther)
 
-        # for logs:
+        # for game_logs:
         self.humanKillL = 0
         self.humanKillR = 0
         self.otherKillL = 0
@@ -451,6 +453,13 @@ class SpaceInvaders(object):
         self.create_audio()
         self.makeNewPlayer = False
         self.makeNewOther = False
+
+        if mode == "p":
+            self.other.kill()
+            self.lifeOther.kill()
+        # else:
+        #     self.lifePlayer2.kill()
+        #     self.lifePlayer3.kill()
 
     def make_blockers(self, number):
         blockerGroup = sprite.Group()
@@ -495,16 +504,22 @@ class SpaceInvaders(object):
 
     def check_input(self):
         humanCanShoot = otherCanShoot = True
+
+        if mode != "c" and self.enemies.rightAliveColumn < 5:
+            otherCanShoot = False
+
+        for mystery in self.mysteryGroup:
+            diff = (self.other.rect.x - mystery.rect.x) * mystery.direction
+        if diff > 0 and diff < 50:
+            otherCanShoot = True
+
         for bullet in self.bullets:
             if bullet.origin == "human":
                 humanCanShoot = False
             elif bullet.origin == "other":
                 otherCanShoot = False
 
-        if not cooperate and self.enemies.rightAliveColumn < 5:
-            otherCanShoot = False
-
-        if self.lifeOther1.alive():
+        if self.lifeOther.alive():
             if otherCanShoot:
                 bullet = Bullet(self.other.rect.x + 23,
                                 self.other.rect.y + 5, -1,
@@ -530,6 +545,8 @@ class SpaceInvaders(object):
 
     def make_enemies(self):
         enemies = EnemiesGroup(10, 5)
+        if mode == "p":
+            enemies = EnemiesGroup(5, 5)
         for row in range(5):
             for column in range(5):
                 enemy = Enemy(row, column)
@@ -537,11 +554,12 @@ class SpaceInvaders(object):
                 enemy.rect.y = self.enemyPosition + (row * 45)
                 enemies.add(enemy)
 
-            for column in range(5,10):
-                enemy = Enemy(row, column)
-                enemy.rect.x = 400 + ((column - 5) * 50)
-                enemy.rect.y = self.enemyPosition + (row * 45)
-                enemies.add(enemy)
+            if mode != "p":
+                for column in range(5,10):
+                    enemy = Enemy(row, column)
+                    enemy.rect.x = 400 + ((column - 5) * 50)
+                    enemy.rect.y = self.enemyPosition + (row * 45)
+                    enemies.add(enemy)
 
         self.enemies = enemies
 
@@ -554,7 +572,7 @@ class SpaceInvaders(object):
             self.allSprites.add(self.enemyBullets)
             self.timer = time.get_ticks()
 
-    def calculate_score(self, row, column):
+    def calculate_score(self, row, bulletX):
         scores = {0: 30,
                   1: 20,
                   2: 20,
@@ -564,9 +582,7 @@ class SpaceInvaders(object):
                   }
 
         score = scores[row]
-        if row == 5:
-            column = column // 80
-        if column < 5:
+        if bulletX < 400:
             self.player_score += score
         else:
             self.other_score += score
@@ -593,12 +609,13 @@ class SpaceInvaders(object):
                                          True, True)
         for enemy in enemyBulletDict.keys():
             self.sounds['invaderkilled'].play()
-            self.calculate_score(enemy.row, enemy.column)
             EnemyExplosion(enemy, self.explosionsGroup)
             self.gameTimer = time.get_ticks()
 
-            # update for logs:
             for bullet in enemyBulletDict[enemy]:
+                self.calculate_score(enemy.row, bullet.rect.x)
+
+                # update for game_logs:
                 if enemy.column >= 5 and bullet.origin == "human":
                     self.humanKillR += 1
                 elif enemy.column < 5 and bullet.origin == "human":
@@ -608,11 +625,13 @@ class SpaceInvaders(object):
                 elif enemy.column < 5 and bullet.origin == "other":
                     self.otherKillL += 1
 
-        for mystery in sprite.groupcollide(self.mysteryGroup, self.bullets,
-                                           True, True).keys():
+        mysteryBulletDict = sprite.groupcollide(self.mysteryGroup, self.bullets,
+                                              True, True)
+        for mystery in mysteryBulletDict.keys():
             mystery.mysteryEntered.stop()
             self.sounds['mysterykilled'].play()
-            score = self.calculate_score(mystery.row, mystery.rect.x)
+            for bullet in mysteryBulletDict[mystery]:
+                score = self.calculate_score(5, bullet.rect.x)
             MysteryExplosion(mystery, score, self.explosionsGroup)
             newShip = Mystery()
             self.allSprites.add(newShip)
@@ -627,16 +646,12 @@ class SpaceInvaders(object):
                     self.lifePlayer2.kill()
                 elif self.lifePlayer1.alive():
                     self.lifePlayer1.kill()
-                    if not self.lifeOther1.alive():
+                    if not self.lifeOther.alive():
                         self.gameOver = True
                         self.startGame = False
             else:
-                if self.lifeOther3.alive():
-                    self.lifeOther3.kill()
-                elif self.lifeOther2.alive():
-                    self.lifeOther2.kill()
-                elif self.lifeOther1.alive():
-                    self.lifeOther1.kill()
+                if self.lifeOther.alive():
+                    self.lifeOther.kill()
                     if not self.lifePlayer1.alive():
                         self.gameOver = True
                         self.startGame = False
@@ -645,7 +660,7 @@ class SpaceInvaders(object):
             ShipExplosion(player, self.explosionsGroup)
             if player.human and self.lifePlayer1.alive():
                 self.makeNewPlayer = True
-            elif not player.human and self.lifeOther1.alive():
+            elif not player.human and self.lifeOther.alive():
                 self.makeNewOther = True
             self.shipTimer = time.get_ticks()
 
@@ -656,9 +671,9 @@ class SpaceInvaders(object):
                     self.lifePlayer2.kill()
                     self.lifePlayer1.kill()
                 else:
-                    self.lifeOther3.kill()
-                    self.lifeOther2.kill()
-                    self.lifeOther1.kill()
+                    # self.lifeOther3.kill()
+                    # self.lifeOther2.kill()
+                    self.lifeOther.kill()
 
             if self.enemies.bottom >= 600:
                 #print(self.enemies.bottom)
@@ -669,9 +684,9 @@ class SpaceInvaders(object):
                     self.lifePlayer1.kill()
                 if self.enemies.rightAliveColumn >= 5:
                     self.other.kill()
-                    self.lifeOther3.kill()
-                    self.lifeOther2.kill()
-                    self.lifeOther1.kill()
+                    # self.lifeOther3.kill()
+                    # self.lifeOther2.kill()
+                    self.lifeOther.kill()
                 # Reset enemy starting position
                 self.enemyPosition = ENEMY_DEFAULT_POSITION
                 self.create_game_over(time.get_ticks(), False)
@@ -715,7 +730,7 @@ class SpaceInvaders(object):
         elif passed > 10000:
             self.mainScreen = True
         for e in event.get():
-            if e.type == KEYUP and passed > 1000:
+            if e.type == KEYUP and passed > 3000:
                 self.mainScreen = True
             if self.should_exit(e):
                 self.makeExit()
@@ -740,7 +755,7 @@ class SpaceInvaders(object):
                         #                                 self.make_blockers(1),
                         #                                 self.make_blockers(2),
                         #                                 self.make_blockers(3))
-                        self.livesGroup.add(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther1, self.lifeOther2, self.lifeOther3)
+                        self.livesGroup.add(self.lifePlayer1, self.lifePlayer2, self.lifePlayer3, self.lifeOther)
                         self.reset(0, 0)
                         self.startGame = True
                         self.mainScreen = False
@@ -768,13 +783,13 @@ class SpaceInvaders(object):
                     if not self.lifePlayer1.alive():
                         draw.line(self.screen, RED, (238, 15), (310, 15), 3)
                     self.livesTextOther.draw(self.screen)
-                    if not self.lifeOther1.alive():
+                    if not self.lifeOther.alive():
                         draw.line(self.screen, RED, (638, 15), (710, 15), 3)
                     draw.line(self.screen, WHITE, (400, 0), (400, 600), 1)  # middle line
                     self.check_input()
                     self.enemies.update(currentTime)
                     self.allSprites.update(self.keys, currentTime)
-                    updateAI(self.other, self.enemies, self.enemyBullets, cooperate=cooperate)
+                    updateAI(self.other, self.enemies, self.enemyBullets, mode=mode)
                     self.explosionsGroup.update(currentTime)
                     self.check_collisions()
                     self.create_new_ship(self.makeNewPlayer, currentTime, human=True)
@@ -791,19 +806,25 @@ class SpaceInvaders(object):
             self.clock.tick(60)
 
     def makeExit(self):
-        c = "cooperative" if cooperate else "uncooperative"
-        logs.write("Game against: " + c + " player\n")
+        if mode == "c":
+            logs.write("Game against: cooperative player\n")
+        elif mode == "d":
+            logs.write("Game against: uncooperative player\n")
+        elif mode == "p":
+            logs.write("Game: practice round\n")
+
+
         duration = str(int(ti.time() - startTime))
         logs.write("Duration (seconds): " + duration + "\n")
         logs.write("(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)\n")
         logs.write("Human: (" + str(self.player_score) + ", " + str(self.lifePlayer1.alive())
                    + ", " + str(self.humanKillL) + ", " + str(self.humanKillR) + ")\n")
-        logs.write("AI: (" + str(self.other_score) + ", " + str(self.lifeOther1.alive())
+        logs.write("AI: (" + str(self.other_score) + ", " + str(self.lifeOther.alive())
                    + ", " + str(self.otherKillL) + ", " + str(self.otherKillR) + ")\n\n")
         sys.exit()
 
 if __name__ == '__main__':
-    logs = open("logs.txt", "a")
+    logs = open("game_logs/other_logs.txt", "a")
     logs.write("Date/Time: " + datetime.now().strftime("%m/%d/%Y %H:%M:%S") + "\n")
     # variables for log
     startTime = ti.time()

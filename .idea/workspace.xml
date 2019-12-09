@@ -2,11 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="52a9fd4c-c808-4d6a-b62c-576081f6fc73" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/images/avery.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/images/jordan.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/logs.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/game_logs/main_logs.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/game_logs/other_logs.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/space_invaders_game_in_action.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/images/other.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/spaceinvaders.py" beforeDir="false" afterPath="$PROJECT_DIR$/spaceinvaders.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -26,6 +27,12 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/game_logs" />
+      <recent name="$PROJECT_DIR$/images" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -94,7 +101,14 @@
       <option name="project" value="LOCAL" />
       <updated>1574357525997</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Added logging and some minor fixes.">
+      <created>1574803412258</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1574803412258</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -115,6 +129,7 @@
     <MESSAGE value="fixed death cases for end of game" />
     <MESSAGE value="made ai agent" />
     <MESSAGE value="improved ai agent, fixed post-game screen, made both cooperative and ignoring" />
-    <option name="LAST_COMMIT_MESSAGE" value="improved ai agent, fixed post-game screen, made both cooperative and ignoring" />
+    <MESSAGE value="Added logging and some minor fixes." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added logging and some minor fixes." />
   </component>
 </project>

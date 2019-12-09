@@ -1,7 +1,0 @@
-Date/Time: 11/26/2019 15:43:59
-Game against: uncooperative player
-Duration (seconds): 25
-(Score, Survived, Enemies Killed on Left, Enemies Killed on Right)
-Human: (450, True, 25, 0)
-AI: (450, True, 0, 25)
-
